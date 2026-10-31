@@ -1,11 +1,41 @@
 [
   {
-    "name": "example",
-    "title": "TODO(author): the first document this industry must produce",
-    "for_each": "select gen_random_uuid() as id, 'Example' as name",
-    "file": "name",
+    "name": "review-pack",
+    "title": "Supplier master review pack",
+    "for_each": "select id,code from masters where status <> 'retired' order by code",
+    "file": "code",
     "sections": [
-      { "title": "Details", "sql": "select 'replace me' as item, $1::text as record_id" }
+      {
+        "title": "Internal draft",
+        "sql": "select code,name,owner,purpose,review_due,status,revision from masters where id=$1",
+        "layout": "record",
+        "note": "Review evidence and identity before approval. This is not a bank detail or payment authority."
+      },
+      {
+        "title": "Chosen values and their evidence",
+        "sql": "select f.field,f.value,s.source_system,s.source_key,s.version,s.evidence_ref,f.reason from master_fields f join source_records s on s.id=f.record_id where f.master_id=$1 order by field"
+      },
+      {
+        "title": "Outstanding checks",
+        "sql": "select rule,issue from v_issues where master_id=$1"
+      },
+      {
+        "title": "Review history",
+        "sql": "select revision,actor,evidence_ref,note,created_at from reviews where master_id=$1 order by created_at"
+      }
+    ]
+  },
+  {
+    "name": "change-register",
+    "title": "Supplier change register",
+    "for_each": "select id,code from masters order by code",
+    "file": "code",
+    "sections": [
+      {
+        "title": "Attributed decisions",
+        "sql": "select action,actor,detail,created_at from events where master_id=$1 order by created_at",
+        "note": "Actor names are recorded attribution. Database administrator activity is outside this log."
+      }
     ]
   }
 ]

@@ -1,0 +1,7 @@
+{
+  "key": "SupplierID",
+  "name": "SupplierName",
+  "business-id": "BusinessID",
+  "country": "Country",
+  "address": "Address"
+}

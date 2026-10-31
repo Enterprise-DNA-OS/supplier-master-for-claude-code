@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'supplier-master-test-'));
+process.env.DATA_DIR=path.join(temp,'db');process.env.OUTPUT_DIR=temp;process.env.DATABASE_URL=process.env.TEST_DATABASE_URL||'';
+const {getDb,REPO_ROOT}=await import('./lib/db.mjs');const {migrate}=await import('./migrate.mjs');const {seed}=await import('./seed.mjs');const {run,commands,reads,date,fields}=await import('./supplier.mjs');const {parseCsv}=await import('./lib/csv.mjs');const {table}=await import('./lib/render.mjs');
+const db=await getDb(),schema='supplier_test_'+Date.now(),visited=new Set();let checks=0,closed=false;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;},ok=v=>{assert.ok(v);checks++;};
+const call=(...args)=>{visited.add(args[0]);return run(db,args);};const fail=async(args,re)=>{await assert.rejects(()=>call(...args),re);checks++;};
+const count=async t=>Number((await db.query('select count(*) n from '+t))[0].n);
+const actor='--actor=Editor',reviewer='--actor=Reviewer';const now=new Date().toISOString().slice(0,10);
+const file=(n,s)=>{const p=path.join(temp,n);fs.writeFileSync(p,s);return p;};
+const invoke=(script,args=[])=>{const env={...process.env};if(db.mode==='postgres'){const u=new URL(process.env.TEST_DATABASE_URL);u.searchParams.set('options','-c search_path='+schema);env.DATABASE_URL=u.href;}return spawnSync(process.execPath,[path.join(REPO_ROOT,'scripts',script),...args],{cwd:REPO_ROOT,env,encoding:'utf8'});};
+try{
+ if(db.mode==='postgres')await db.exec('create schema '+schema+'; set search_path to '+schema);
+ eq((await migrate(db)).ran.length,1);eq((await migrate(db)).ran.length,0);await seed(db);await seed(db);eq(await count('source_records'),5);
+ for(const cmd of Object.keys(reads))ok(Array.isArray(await call(cmd)));
+ eq((await call('insights')).length,10);eq((await call('show','masters','sup-001')).sources.length,2);eq((await call('show','sources','erp/v100')).name,'Kauri Components Ltd');
+ await fail(['show','sources','Southern'],/Ambiguous/);await fail(['show','masters','missing'],/Available/);
+ await fail(['show','events','x'],/Choose/);await fail(['attention','--bogus=x'],/Unknown flag/);await fail(['log','SUP-001','--note=x'],/actor/);
+ await fail(['approve','SUP-002','--reference=x','--note=x',reviewer],/Approval blocked/);
+ await fail(['approve','SUP-001','--reference=x','--note=x','--actor=demo'],/must differ/);
+ await call('approve','SUP-001','--reference=checked-1','--note=Inspected source forms',reviewer);eq((await call('ready')).length,1);
+ await call('choose','SUP-001','--field=address','--record=Purchasing/P44','--reason=Newer written address evidence',actor);eq((await call('ready')).length,0);
+ await fail(['approve','SUP-001','--reference=x','--note=x','--actor=editor'],/must differ/);
+ await call('approve','SUP-001','--reference=checked-2','--note=Checked changed address',reviewer);eq((await call('ready'))[0].address,'18 Harbour Road, Auckland');
+ const sourceArgs=['add-source','--system=ERP','--key=V100','--name=Kauri Components Ltd','--business-id=DEMO-NZ-100','--country=NZ','--address=28 Harbour Road, Auckland','--observed='+now,'--reference=updated-form',actor];
+ await call(...sourceArgs);eq(await count('source_records'),6);eq((await call('ready')).length,0);ok((await call('compliance')).some(x=>x.rule==='STALE_LINK'));
+ eq((await call(...sourceArgs)).skipped,true);eq(await count('source_records'),6);
+ await fail(['choose','SUP-001','--field=name','--record=ERP/V100','--reason=Fresh form',actor],/Link the current/);
+ await call('link','SUP-001','--record=ERP/V100','--replace','--reason=Adopt updated source',actor);
+ await fail(['approve','SUP-001','--reference=x','--note=x',reviewer],/FIELD/);
+ for(const f of fields)await call('choose','SUP-001','--field='+f,'--record=ERP/V100','--reason=Verified new source',actor);
+ await call('approve','SUP-001','--reference=checked-3','--note=Checked updated source',reviewer);eq((await call('ready')).length,1);
+ await fail(['link','SUP-002','--record=Purchasing/P88','--reason=Same display name',actor],/Identity conflict/);
+ await fail(['link','SUP-003','--record=ERP/V100','--reason=Cross company',actor],/Identity conflict/);
+ await fail(['link','SUP-001','--record=ERP/V100','--replace','--reason=Repeat',actor],/Already linked/);
+ await call('add','--code=SUP-004','--name=Test Supplier','--owner=Owner','--purpose=Buying','--due=2099-01-01',actor);
+ await fail(['link','SUP-004','--record=ERP/V100','--reason=Already assigned',actor],/unique/);
+ await call('add-source','--system=Test','--key=T1','--name=Test Supplier','--business-id=DEMO-NZ-TEST','--country=NZ','--address=Test Road','--observed='+now,'--reference=form-test',actor);
+ await call('link','SUP-004','--record=Test/T1','--reason=Checked identity',actor);
+ for(const f of fields)await call('choose','SUP-004','--field='+f,'--record=Test/T1','--reason=Checked field',actor);
+ await call('scope','SUP-004','--purpose=Purchase correspondence','--owner=Owner Two','--due=2099-01-01',actor);
+ await call('approve','SUP-004','--reference=review-four','--note=Checked original',reviewer);eq((await call('ready')).length,2);
+ await call('log','SUP-004','--note=Discussed owner review',actor);eq((await call('ready')).length,2);ok((await call('history','SUP-004')).length>=7);
+ await call('unlink','SUP-004','--record=Test/T1','--reason=Revisit identity',actor);eq((await call('ready')).length,1);eq((await call('show','masters','SUP-004')).fields.length,0);
+ const draft=await call('draft-review','SUP-001');ok(fs.readFileSync(draft.file,'utf8').includes('Internal draft'));
+ await call('retire','SUP-004','--reason=Duplicate master retired',actor);await fail(['scope','SUP-004','--purpose=x','--owner=y','--due=2099-01-01',actor],/Retired/);
+ for(const v of ['2026-02-30','01/02/2026','2026-13-01']){assert.throws(()=>date(v));checks++;}
+ await fail(['add-source','--system=X','--key=1','--name=X','--country=NZ','--observed=2999-01-01','--reference=x',actor],/future/);
+ await fail(['add-source','--system=X','--key=1','--name=X','--country=US','--observed='+now,'--reference=x',actor],/Country/);
+ await fail(['add-source','--system=ERP','--key=V100','--name=X','--country=NZ','--observed=2000-01-01','--reference=x',actor],/older/);
+ eq(parseCsv('\ufeffA,B\r\na,"b,c\nline"\r\n')[0].B,'b,c\nline');
+ for(const csv of ['A,a\nx,y','A,B\n1','A,B\nx,"bad','A,B\nx,"ok"bad']){assert.throws(()=>parseCsv(csv));checks++;}
+ ok(table([{text:'<script>alert(1)</script>'}]).includes('&lt;script&gt;'));
+ const sample=path.join(REPO_ROOT,'examples/semarchy-suppliers.csv');const imp=['import','semarchy-xdm',sample,'--system=xDM','--observed='+now,'--reference=fixture-only',actor];
+ let before=await count('source_records'),events=await count('events');await call(...imp,'--dry-run');eq(await count('source_records'),before);eq(await count('events'),events);eq(await count('imports'),0);
+ eq((await call(...imp)).added,2);eq((await call(...imp)).duplicate_batch,true);eq(await count('imports'),1);
+ const bad=file('rollback.csv','SupplierID,SupplierName,BusinessID,Country,Address\nROLLBACK,First,DEMO-1,NZ,First\nV100,Second,DEMO-2,NZ,Second\n');
+ before=await count('source_records');events=await count('events');
+ await fail(['import','semarchy-xdm',bad,'--system=ERP','--observed=2001-01-01','--reference=bad',actor],/older/);eq(await count('source_records'),before);eq(await count('events'),events);eq(await count('imports'),1);
+ const map=file('map.json',JSON.stringify({key:'ID',name:'LegalName',country:'Nation'}));const mapped=file('mapped.csv','ID,LegalName,Nation\nM1,Mapped Supplier,NZ\n');
+ await call('import','semarchy-xdm',mapped,'--map='+map,'--system=Mapped','--observed='+now,'--reference=mapped',actor);eq((await call('show','sources','Mapped/M1')).business_id,'');
+ await fail(['import','semarchy-xdm',mapped,'--system=X','--observed='+now,'--reference=x',actor],/missing CSV/);
+ await fail(['choose','SUP-001','--field=name;drop','--record=ERP/V100','--reason=x',actor],/Choose field/);
+ await fail(['log','SUP-001','--actor=A','--actor=B','--note=x'],/Duplicate/);
+ await fail(['import','semarchy-xdm',sample,'--dry-run=false',actor],/Boolean/);
+ await assert.rejects(()=>db.query("update source_records set name='changed'"),/Append-only/);checks++;
+ await assert.rejects(()=>db.query("delete from events"),/Append-only/);checks++;
+ await assert.rejects(()=>seed(db),/operated/);checks++;
+ const exported=await call('export','--out='+path.join(temp,'full.json'));const data=JSON.parse(fs.readFileSync(exported.file));eq(data.source_records.length,await count('source_records'));ok(data.imports[0].original_rows.length>0);
+ await fail(['export','--out='+exported.file],/EEXIST/);
+ const ready=await call('export','--ready','--out='+path.join(temp,'ready.json'));eq(JSON.parse(fs.readFileSync(ready.file)).ready.length,1);
+ for(const c of commands)ok(visited.has(c));
+ await db.close();closed=true;
+ for(const script of ['view.mjs','docs.mjs']){const result=invoke(script);assert.equal(result.status,0,result.stderr);checks++;}
+ const json=invoke('supplier.mjs',['attention','--json']);eq(json.status,0);ok(Array.isArray(JSON.parse(json.stdout)));
+ const human=invoke('supplier.mjs',['field-conflicts']);eq(human.status,0);ok(human.stdout.includes('source_values'));
+ const amb=invoke('supplier.mjs',['show','sources','Southern']);eq(amb.status,1);ok(amb.stderr.includes('Ambiguous'));
+ const pack=fs.readdirSync(path.join(temp,'docs-out','review-pack'))[0];ok(fs.readFileSync(path.join(temp,'docs-out','review-pack',pack),'utf8').includes('not a bank detail'));
+ console.log(`PASS: ${checks} assertions; all ${commands.length} CLI commands; migration, idempotent seed, identity conflicts, provenance, independent review, stale approvals, import rollback, export, docs, views and CLI processes (${process.env.TEST_DATABASE_URL?'PostgreSQL':'PGlite'}).`);
+}finally{
+ if(!closed)await db.close();
+ if(process.env.TEST_DATABASE_URL){const c=await getDb();try{await c.exec('drop schema if exists '+schema+' cascade');}finally{await c.close();}}
+ fs.rmSync(temp,{recursive:true,force:true});
+}

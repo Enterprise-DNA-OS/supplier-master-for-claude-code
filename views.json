@@ -1,13 +1,40 @@
 [
   {
-    "name": "week",
-    "title": "This week",
-    "subtitle": "Supplier Master for Claude Code: what needs attention, rendered by npm run view",
+    "name": "stewardship-week",
+    "title": "Supplier stewardship this week",
     "sections": [
       {
-        "title": "Needs attention",
-        "note": "TODO(author): point this at the industry's attention view (overdue, stuck, quiet).",
-        "sql": "select 'replace me' as item, 'TODO(author)' as why"
+        "title": "Review queue",
+        "sql": "select code,name,owner,status,issues,current_review,review_due from v_review_queue order by review_due"
+      },
+      {
+        "title": "Attention",
+        "sql": "select code,rule,issue from v_issues order by code,rule"
+      }
+    ]
+  },
+  {
+    "name": "source-conflicts",
+    "title": "Source conflicts and crosswalks",
+    "sections": [
+      {
+        "title": "Field decisions",
+        "sql": "select code,field,source_values,chosen_value from v_field_conflicts order by code,field"
+      },
+      {
+        "title": "Source lineage",
+        "sql": "select code,source_system,source_key,version,current_version,stale_link from v_crosswalk order by code,source_system"
+      }
+    ]
+  },
+  {
+    "name": "approved-suppliers",
+    "title": "Currently approved supplier records",
+    "sections": [
+      {
+        "title": "Ready for owner-authorised reuse",
+        "sql": "select code,name,business_id,country,address,review_due from v_ready order by code",
+        "note": "Read-only snapshot. Recheck before use. No records have been sent to another system."
       }
     ]
   }

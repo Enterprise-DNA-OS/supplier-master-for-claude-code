@@ -1,43 +1,53 @@
-# Supplier Master for Claude Code: operating instructions
+# Supplier Master for Claude Code
 
-This file is the brain. Claude Code reads it at the start of every session. It says who this is for, how work gets done, and the one right way to do each recurring job.
+For trusted supplier-data stewards in an NZ or AU business. Enter your business name, operator roles and agreed review policy before handling real data. The demo is fictional.
 
-## Who this is for
+## One workflow library
 
-- **Business:** [YOUR BUSINESS]
-- **Operator:** [YOUR NAME], [your role]
-- **What matters most:** [the one or two outcomes you care about]
+Use scripts/supplier.mjs for records. Read the record and original evidence before a write. Claude Code, Codex, OpenCode and Cursor use the same .claude/commands library.
 
-Fill this in once. A worker with context knows. A worker without it guesses.
-
-## How to work
-
-1. **Take a brief, not a script.** The operator describes the outcome. You run the right command and present the answer.
-2. **Read before you write.** Before drafting anything about a record, read its full history first.
-3. **Plain language.** Short sentences. No filler. Numbers in tables.
-4. **Silent success, loud problems.** No play-by-play. Say what broke and what you did about it.
-5. **Stop at the line.** Anything that sends, deletes, or faces a customer waits for a yes in this session.
-
-## Routing table: one right way for each recurring job
-
-| When the operator asks for... | Use this |
+| Job | Recipe |
 |---|---|
-| <!-- TODO(author): one row per slash command --> | `/...` |
+| /sources | Read the latest imported and manually recorded supplier evidence. |
+| /masters | Read supplier master owners, purpose, status and review dates. |
+| /duplicates | Inspect exact identifier or normalised-name matches. These are suggestions, never proof of identity. |
+| /field-conflicts | Compare conflicting field values with the selected evidence. |
+| /crosswalk | Read the link from each master to each source system and record version. |
+| /attention | Find missing fields, overdue owner reviews and stale evidence. |
+| /compliance | Check local record-quality controls and read docs/compliance.md for their sources and limits. |
+| /review-queue | Plan this week’s stewardship reviews by due date and outstanding checks. |
+| /ready | Read currently approved suppliers with complete, current evidence. |
+| /stale-sources | Find source evidence older than the local 180-day policy. |
+| /imports | Read import batch counts and attribution. |
+| /insights | Answer ten cross-record questions from the current database. |
+| /show | Read one full master or source record using an unambiguous identifier. |
+| /history | Read the attributed decision history for one master. |
+| /add-source | Append checked supplier evidence as a new version. Never invent an observation date. |
+| /add | Create a draft supplier master with an owner and review date. |
+| /link | Link one current source record after checking business identity. |
+| /unlink | Remove a mistaken link with a reason. Keep source history and invalidate approval. |
+| /choose | Select a field from linked evidence and record why that source wins. |
+| /scope | Record the purpose, accountable owner and next review date. |
+| /approve | Record an independent human review of the original evidence. |
+| /retire | Retire a master without deleting its history. |
+| /log | Append an internal note. A note does not certify a record. |
+| /import | Preview and import a Semarchy xDM CSV using explicit column mapping. |
+| /export | Write a portable JSON copy to a new private file. |
+| /draft-review | Draft a branded internal review pack in drafts/. Never send it. |
+| /weekly-review | Review the week from the queue, field conflicts and attention list. |
+| /customise | Add a field or local rule with a tested migration. |
+| /new-view | Add a branded read-only report. |
 
-If an ask fits nothing here, run the CLI directly (`npm run <cli> -- --help`) and then propose a new command for it.
+## Operating rules
 
-## Hard rules
+Every answer starts with current CLI data. All writes need --actor and append history. A name match is a suggestion, not identity. Never invent a business identifier, evidence reference, source observation date or independent approval. Actor names are attribution, not authentication.
 
-- Never send email or messages from here. Draft to `drafts/`, a person sends.
-- Never delete records without an explicit yes in this session. Prefer marking closed or archived.
-- Never invent a record. If a name is ambiguous, list the candidates and ask.
-- The database is the source of truth. If the answer is not in it, say so.
+A reviewer must differ from every recorded master editor. Changing evidence or a field removes ready status. Read docs/compliance.md before making a compliance statement. The 180-day freshness policy is local, not a statutory deadline. No payment details or payment instructions belong here.
 
-## Where things live
+Nothing sends, pays, publishes or writes to a source system. Draft to drafts/. Retire obsolete masters. Source snapshots, import batches, reviews and events are append-only to ordinary application commands. An administrator can bypass application controls. Plan retention and erasure of personal data separately.
 
-- `scripts/` the CLI. `scripts/lib/db.mjs` picks `DATABASE_URL` (Postgres, Supabase) or the embedded database in `.data/`.
-- `supabase/migrations/` the schema, plain SQL. `npm run migrate` applies it.
-- `.claude/commands/` the slash commands. Add one every time the same ask comes twice.
-- `docs/` the thesis and the guide for moving off Semarchy xDM.
+Use one private database for one business. Never expose a database owner connection to untrusted users. Keep source files, credentials and generated reports out of git. Export is a portable copy, not a database backup. Use tested native backups for recovery.
 
-Built by Enterprise DNA. Installed and run for you as part of Omni: https://enterprisedna.co/omni/instead-of/semarchy-xdm
+Run npm test after code changes. Add migrations in sequence. Use npm run demo only in the local demo database. Reports are read-only snapshots and must be refreshed before a decision.
+
+Omni by Enterprise DNA: https://enterprisedna.co/omni/instead-of/semarchy-xdm

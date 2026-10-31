@@ -1,12 +1,6 @@
-<h1 align="center">Supplier Master for Claude Code</h1>
+# Supplier Master for Claude Code
 
-<p align="center">
-  <strong>The open-source supplier master record system that is just a database and Claude Code.</strong>
-</p>
-
-<p align="center">
-  Created by <a href="https://www.enterprisedna.co"><strong>Enterprise DNA</strong></a>. Free and open source. Works with Claude Code, Codex, OpenCode or Cursor.
-</p>
+The open-source supplier master record system that is just a database and Claude Code. Created by Enterprise DNA. Works with Claude Code, Codex, OpenCode or Cursor.
 
 <!-- three-doors -->
 <table align="center">
@@ -17,99 +11,119 @@
   </tr>
 </table>
 
-<p align="center">
-  <a href="#what-is-this">What is this</a> &bull;
-  <a href="#why-no-front-end">Why no front end</a> &bull;
-  <a href="#quick-start">Quick start</a> &bull;
-  <a href="#the-commands">Commands</a> &bull;
-  <a href="#instead-of-semarchy-xdm">Instead of Semarchy xDM</a> &bull;
-  <a href="#want-it-installed-and-run-for-you">Installed for you</a> &bull;
-  <a href="#license">License</a>
-</p>
+## What it does
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node-20+-339933?style=flat-square" alt="Node 20+" />
-  <img src="https://img.shields.io/badge/PostgreSQL-any-336791?style=flat-square" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/PGlite-embedded-3ecf8e?style=flat-square" alt="PGlite" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License" />
-</p>
+Keep supplier records from different systems, review duplicate suggestions, choose each master field from its evidence and record an independent approval. Keep every source version and every decision. A changed source, expired review or missing field removes the supplier from the ready list.
 
----
+This is a focused supplier stewardship base for trusted NZ/AU operators. Semarchy xDM is a broader master-data platform. We have not verified a current public standard annual price on its own website. Bring your quote and models to a scope review. [Research and scorecard](docs/research.md) separate historical price evidence from current claims.
 
-## What is this
-
-Supplier Master for Claude Code does the job you pay Semarchy xDM for, as a Postgres database and a set of agent commands. There is no web front end. You open the folder in [Claude Code](https://claude.com/claude-code) (or Codex, OpenCode, Cursor: see `AGENTS.md`) and ask for what you want in plain language. It runs the right query, and it can answer questions the Semarchy xDM dashboard cannot.
-
-<!-- TODO(author): the annual bill. One sentence: what a 10 to 50 person business typically pays Semarchy xDM per year, all in, with a source. -->
-
-Want the same thing with a web front end, or built on a different stack? That is a customisation, and it is exactly what Enterprise DNA does: [book a call](https://enterprisedna.co/omni/book/?utm_source=github&utm_medium=readme&utm_campaign=semarchy-xdm).
-
-<!-- TODO(author): two or three sentences on what this specific product covers and who it is for. -->
-
-## Why no front end
-
-- The front end was only ever there because the database was hard to talk to. That is no longer true.
-- Your data sits in plain Postgres tables you own. Any tool can read them. No export, no lock-in.
-- No seats, no tiers, no add-ons. Read [docs/why-no-front-end.md](docs/why-no-front-end.md) for the honest trade-offs too.
+Omni by Enterprise DNA customises and runs your version for a setup fee, then a retainer. Your fields, rules, source mappings, preferred database stack and team screens can be part of that work.
 
 ## Quick start
 
-Sixty seconds, no database install (an embedded Postgres runs inside Node):
+Node 20 or newer. Embedded PGlite needs no database installation.
 
 ```bash
-git clone https://github.com/Enterprise-DNA-OS/supplier-master-for-claude-code.git
-cd supplier-master-for-claude-code
 npm install
 npm run demo
+node scripts/supplier.mjs review-queue
+node scripts/supplier.mjs field-conflicts
+node scripts/supplier.mjs insights
+npm run view
+npm run docs
+npm test
 ```
 
-Then open the folder in Claude Code and type a slash command. <!-- TODO(author): name the first command to try. -->
+Open this folder in your coding agent and ask for /weekly-review. All runtimes use the same .claude/commands library. The demo contains fictional names and deliberately conflicting, stale and overdue records. Business identifiers beginning DEMO are invented fixtures, not valid registry identifiers.
 
-### Use it with your own Postgres or Supabase
+For actual work, use a separate empty DATA_DIR or set DATABASE_URL to your private PostgreSQL database and run npm run migrate. Do not seed an operated database. The seed refuses hosted databases except the isolated test mode. Never put credentials or exports in git.
 
-Copy `.env.example` to `.env`, set `DATABASE_URL`, then `npm run migrate`. Same commands, shared data, no per-seat fee.
+## Weekly work
 
-## The commands
-
-<!-- TODO(author): a table of the slash commands in .claude/commands and what each one does. -->
-
-| Command | What it does |
+| Command | Job |
 |---|---|
-| `/...` | ... |
+| /sources | Read the latest imported and manually recorded supplier evidence. |
+| /masters | Read supplier master owners, purpose, status and review dates. |
+| /duplicates | Inspect exact identifier or normalised-name matches. These are suggestions, never proof of identity. |
+| /field-conflicts | Compare conflicting field values with the selected evidence. |
+| /crosswalk | Read the link from each master to each source system and record version. |
+| /attention | Find missing fields, overdue owner reviews and stale evidence. |
+| /compliance | Check local record-quality controls and read docs/compliance.md for their sources and limits. |
+| /review-queue | Plan this week’s stewardship reviews by due date and outstanding checks. |
+| /ready | Read currently approved suppliers with complete, current evidence. |
+| /stale-sources | Find source evidence older than the local 180-day policy. |
+| /imports | Read import batch counts and attribution. |
+| /insights | Answer ten cross-record questions from the current database. |
+| /show | Read one full master or source record using an unambiguous identifier. |
+| /history | Read the attributed decision history for one master. |
+| /add-source | Append checked supplier evidence as a new version. Never invent an observation date. |
+| /add | Create a draft supplier master with an owner and review date. |
+| /link | Link one current source record after checking business identity. |
+| /unlink | Remove a mistaken link with a reason. Keep source history and invalidate approval. |
+| /choose | Select a field from linked evidence and record why that source wins. |
+| /scope | Record the purpose, accountable owner and next review date. |
+| /approve | Record an independent human review of the original evidence. |
+| /retire | Retire a master without deleting its history. |
+| /log | Append an internal note. A note does not certify a record. |
+| /import | Preview and import a Semarchy xDM CSV using explicit column mapping. |
+| /export | Write a portable JSON copy to a new private file. |
+| /draft-review | Draft a branded internal review pack in drafts/. Never send it. |
+| /weekly-review | Review the week from the queue, field conflicts and attention list. |
+| /customise | Add a field or local rule with a tested migration. |
+| /new-view | Add a branded read-only report. |
 
-## Instead of Semarchy xDM
+26 CLI commands and 29 workflow commands. [CLI reference](docs/cli.md) has the flags, examples and refusal rules. All commands support --json, partial IDs and case-insensitive names. Ambiguous names list candidates and exit 1.
 
-<!-- TODO(author): how to bring data across from Semarchy xDM; link docs/replace-semarchy-xdm.md -->
+## Ten questions to ask
 
-## Architecture
+The insights command answers these from live local records. They are included analyses, not a claim that Semarchy cannot build equivalent reports.
 
-```
-supplier-master-for-claude-code/
-  CLAUDE.md                 how the operator wants this run (routing table + house rules)
-  AGENTS.md                 the same, for Codex / OpenCode / Cursor / Gemini CLI
-  .claude/commands/         the slash commands
-  scripts/                  the CLI the commands drive
-  scripts/lib/db.mjs        one adapter: DATABASE_URL (pg) or embedded PGlite
-  supabase/migrations/      plain SQL schema
-  supabase/seed.sql         demo data
-  docs/                     the thesis and the migration guide
-```
+1. Which masters have overdue owner reviews?
+2. Which names match despite different business identifiers?
+3. Which masters have competing source addresses?
+4. Which linked records have newer source evidence?
+5. Which source records have no master?
+6. Which owners have the most open checks?
+7. Which evidence is too old for the local review rule?
+8. Which complete records still need approval?
+9. Which fields came from a different source than the supplier name?
+10. Which approved suppliers are currently fit for reuse?
 
-## Built for coding agents
+## Bring your history
 
-The database, CLI and command recipes work with Claude Code, Codex, OpenCode or Cursor. Ask your coding agent for a new command and have it implement and test the change against the same records.
+Export supplier collections from Semarchy xDM as CSV. Map the actual headers and import each file with one command, after a dry run. [Switching guide](docs/replace-semarchy-xdm.md) explains model-specific fields, stable IDs, observation dates and what needs separate migration. The supplied CSV is synthetic, not a vendor export sample. Every imported row is preserved. Repeated batches skip and failed files roll back.
 
-## Contributing
+## Evidence and review
 
-Issues and pull requests are welcome. Keep the shape: plain SQL, a small CLI, a slash command per recurring job, no front end.
+A source record is an immutable version. A master keeps links to particular versions. Field choices carry the source record and the reason. A match by name is only a suggestion. Conflicting nonempty identifiers or countries block a link. A reviewer must differ from every recorded master editor. Actor names are attribution, not verified identity.
 
-## Want it installed and run for you?
+[Compliance checks](docs/compliance.md) support record-quality review using NZ Principle 8 and Australian APP 10 where applicable. The 180-day evidence policy, required fields and second-person review are local controls, not statutory deadlines or certification. No bank details, sanctions check or payment instruction belongs in this system.
 
-Enterprise DNA installs Supplier Master for Claude Code for your business, migrates your Semarchy xDM data, connects it to the rest of your tools, and runs it for you as part of **Omni**, our managed Command Center. One setup fee, then a monthly retainer.
+## Documents and views
 
-- Book a call: [enterprisedna.co/omni/book](https://enterprisedna.co/omni/book/?offer=replace-software&utm_source=github&utm_medium=readme&utm_campaign=semarchy-xdm)
-- Read more: [enterprisedna.co/omni/instead-of/semarchy-xdm](https://enterprisedna.co/omni/instead-of/semarchy-xdm?utm_source=github&utm_medium=readme&utm_campaign=semarchy-xdm)
+npm run docs creates branded supplier review packs and change registers. /draft-review creates an internal pack in drafts/. npm run view creates three read-only reports: the stewardship week, source conflicts and currently approved suppliers. Set business name, colours and optional logo in brand.json. Nothing sends or updates another system.
 
-## License
+[Why no front end](docs/why-no-front-end.md) explains the screen, mobile, authentication and connector capabilities that a custom version would need.
 
-MIT. Copyright (c) 2026 Enterprise DNA.
+## Your first hour: ten things to ask for
+
+1. Put our business name and colours on the review pack.
+2. Show suppliers with overdue reviews.
+3. Compare two source records before linking them.
+4. Keep the old address and choose the current written evidence.
+5. Show which masters became stale after a new import.
+6. Name the owner and purpose for each supplier record.
+7. Draft a pack for a second person to review.
+8. Export only the currently approved supplier list.
+9. Add our purchasing category with a tested migration.
+10. Add a report grouping open checks by owner.
+
+## Access and recovery
+
+One private database per business, trusted operators only. All domain tables have row-level security enabled without public policies. A database owner bypasses that boundary and can bypass application rules. Append-only records resist ordinary updates, not administrator tampering. Secure original evidence separately, establish retention and erasure rules, and review data-minimisation before import.
+
+PostgreSQL mutations take a transaction lock to keep source versions and review decisions consistent. Local PGlite is single-process. Export produces a portable JSON copy, not a backup or restore tool. Use native backups and test recovery. Generated files escape record text. Reports are snapshots and should be refreshed before use.
+
+[Verification](docs/verification.md) records the tests and platforms actually exercised.
+
+MIT. Semarchy is its owner’s trademark. This project is independent of Semarchy.

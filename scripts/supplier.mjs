@@ -174,8 +174,8 @@ export function format(rows){
  if(!Array.isArray(rows))return JSON.stringify(rows,null,2);if(!rows.length)return '(no records)';
  if(rows[0].question)return rows.map(x=>x.question+'\n'+format(x.rows)).join('\n\n');
  const keys=Object.keys(rows[0]),widths=keys.map(k=>Math.min(85,Math.max(k.length,...rows.map(r=>printable(r[k]).length))));
- const line=r=>keys.map((k,i)=>printable(r[k]).replace(/[\r\n]+/g,' ').slice(0,widths[i]).padEnd(widths[i])).join(' | ');
- return [line(Object.fromEntries(keys.map(k=>[k,k]))),widths.map(w=>'-'.repeat(w)).join('-+-'),...rows.map(line)].join('\n');
+ const line=r=>keys.map((k,i)=>printable(r[k]).replace(/[\r\n]+/g,' ').slice(0,widths[i]).padEnd(widths[i])).join('  ');
+ return [line(Object.fromEntries(keys.map(k=>[k,k.replaceAll('_',' ')]))),widths.map(w=>'-'.repeat(w)).join('  '),...rows.map(line)].join('\n');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
  let db;try{db=await getDb();const result=await run(db,process.argv.slice(2));console.log(process.argv.includes('--json')?JSON.stringify(result,null,2):format(result));}catch(e){console.error(e.message);process.exitCode=1;}finally{if(db)await db.close();}

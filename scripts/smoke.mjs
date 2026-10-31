@@ -73,7 +73,7 @@ try{
  await db.close();closed=true;
  for(const script of ['view.mjs','docs.mjs']){const result=invoke(script);assert.equal(result.status,0,result.stderr);checks++;}
  const json=invoke('supplier.mjs',['attention','--json']);eq(json.status,0);ok(Array.isArray(JSON.parse(json.stdout)));
- const human=invoke('supplier.mjs',['field-conflicts']);eq(human.status,0);ok(human.stdout.includes('source_values'));
+ const human=invoke('supplier.mjs',['field-conflicts']);eq(human.status,0);ok(human.stdout.includes('source values'));
  const amb=invoke('supplier.mjs',['show','sources','Southern']);eq(amb.status,1);ok(amb.stderr.includes('Ambiguous'));
  const pack=fs.readdirSync(path.join(temp,'docs-out','review-pack'))[0];ok(fs.readFileSync(path.join(temp,'docs-out','review-pack',pack),'utf8').includes('not a bank detail'));
  console.log(`PASS: ${checks} assertions; all ${commands.length} CLI commands; migration, idempotent seed, identity conflicts, provenance, independent review, stale approvals, import rollback, export, docs, views and CLI processes (${process.env.TEST_DATABASE_URL?'PostgreSQL':'PGlite'}).`);
